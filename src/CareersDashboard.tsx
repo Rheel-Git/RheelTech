@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import type {FormEvent} from 'react';
-import {ArrowUpRight, BriefcaseBusiness, Check, CircleAlert, Download, FileText, Pencil, Plus, RefreshCw, Search, ShieldCheck, Users, X} from 'lucide-react';
+import {ArrowUpRight, BriefcaseBusiness, Check, CircleAlert, Download, FileText, Pencil, Plus, RefreshCw, Search, ShieldCheck, Trash2, Users, X} from 'lucide-react';
 import {Link} from 'react-router-dom';
 import {supabase} from './lib/supabase';
 
@@ -29,6 +29,7 @@ export default function CareersDashboard({role,onSignOut}:{role:StaffRole;onSign
   const [editor,setEditor]=useState<JobDraft|null>(null);
   const [editingId,setEditingId]=useState<string|null>(null);
   const [selectedApplication,setSelectedApplication]=useState<Application|null>(null);
+  const [deletingJob,setDeletingJob]=useState<Job|null>(null);
   const [saving,setSaving]=useState(false);
   const [busyId,setBusyId]=useState<string|null>(null);
 
@@ -65,6 +66,20 @@ export default function CareersDashboard({role,onSignOut}:{role:StaffRole;onSign
     setSaving(false);
     if(result.error){setError('The vacancy could not be saved. Check the required fields, unique URL, and your staff permissions.');return;}
     setEditor(null);setEditingId(null);setNotice(editingId?'Vacancy updated.':'Vacancy created.');await loadData();
+  }
+
+  async function deleteJob(job:Job){
+    if(!supabase||role!=='admin')return;
+    if(applications.some(app=>app.job_id===job.id)){
+      setError('This vacancy has applications and cannot be deleted. Archive it to remove it from public listings while preserving recruitment records.');
+      setDeletingJob(null);
+      return;
+    }
+    setBusyId(job.id);setError('');setNotice('');
+    const{error:deleteError}=await supabase.from('jobs').delete().eq('id',job.id);
+    setBusyId(null);setDeletingJob(null);
+    if(deleteError){setError('The vacancy could not be deleted. It may have applications or your account may not have permission.');return;}
+    setNotice('Vacancy deleted.');await loadData();
   }
 
   async function updateApplication(app:Application,changes:Partial<Pick<Application,'status'|'internal_notes'>>){
@@ -127,7 +142,7 @@ export default function CareersDashboard({role,onSignOut}:{role:StaffRole;onSign
           <div className="dashboard-form-actions"><button type="button" className="btn darkoutline" onClick={()=>setEditor(null)}>Cancel</button><button className="btn" disabled={saving}>{saving?'Saving…':editingId?'Save changes':'Create vacancy'}</button></div>
         </form>}
         <div className="dashboard-table-tools"><label className="dashboard-search"><Search size={16}/><input placeholder="Search vacancies" value={query} onChange={e=>setQuery(e.target.value)}/></label><span>{filteredJobs.length} vacancies</span></div>
-        {loading?<div className="dashboard-empty">Loading vacancies…</div>:filteredJobs.length===0?<div className="dashboard-empty"><BriefcaseBusiness size={25}/><h3>{query?'No matching vacancies':'No vacancies yet'}</h3><p>{query?'Try another search.':'Create your first vacancy to start receiving applications.'}</p>{!query&&<button className="btn" onClick={startNewJob}><Plus size={16}/> New vacancy</button>}</div>:<div className="dashboard-table-wrap"><table className="dashboard-table"><thead><tr><th>Role</th><th>Status</th><th>Applications</th><th>Closing date</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{filteredJobs.map(job=><tr key={job.id}><td><strong>{job.title}</strong><small>{job.department} · {job.location}</small></td><td><span className={`status-pill status-${job.status}`}>{titleCase(job.status)}</span></td><td>{applications.filter(app=>app.job_id===job.id).length}</td><td>{localDate(job.closing_at)}</td><td><div className="row-actions"><Link to={`/careers/${job.slug}`} target="_blank" aria-label={`View ${job.title} on public careers page`}><ArrowUpRight size={16}/></Link><button onClick={()=>startEditJob(job)} aria-label={`Edit ${job.title}`}><Pencil size={15}/></button></div></td></tr>)}</tbody></table></div>}
+        {loading?<div className="dashboard-empty">Loading vacancies…</div>:filteredJobs.length===0?<div className="dashboard-empty"><BriefcaseBusiness size={25}/><h3>{query?'No matching vacancies':'No vacancies yet'}</h3><p>{query?'Try another search.':'Create your first vacancy to start receiving applications.'}</p>{!query&&<button className="btn" onClick={startNewJob}><Plus size={16}/> New vacancy</button>}</div>:<div className="dashboard-table-wrap"><table className="dashboard-table"><thead><tr><th>Role</th><th>Status</th><th>Applications</th><th>Closing date</th><th><span className="sr-only">Actions</span></th></tr></thead><tbody>{filteredJobs.map(job=>{const applicationCount=applications.filter(app=>app.job_id===job.id).length;return <tr key={job.id}><td><strong>{job.title}</strong><small>{job.department} · {job.location}</small></td><td><span className={`status-pill status-${job.status}`}>{titleCase(job.status)}</span></td><td>{applicationCount}</td><td>{localDate(job.closing_at)}</td><td><div className="row-actions"><Link to={`/careers/${job.slug}`} target="_blank" aria-label={`View ${job.title} on public careers page`}><ArrowUpRight size={16}/></Link><button onClick={()=>startEditJob(job)} aria-label={`Edit ${job.title}`}><Pencil size={15}/></button>{role==='admin'&&<button className="danger-icon" onClick={()=>setDeletingJob(job)} disabled={busyId===job.id||applicationCount>0} title={applicationCount>0?'Archive this vacancy instead; it has applications':'Delete vacancy'} aria-label={applicationCount>0?`Cannot delete ${job.title}; it has applications`:`Delete ${job.title}`}><Trash2 size={15}/></button>}</div></td></tr>})}</tbody></table></div>}
       </section>}
 
       {tab==='applications'&&<section className="dashboard-panel">
@@ -136,6 +151,7 @@ export default function CareersDashboard({role,onSignOut}:{role:StaffRole;onSign
         {loading?<div className="dashboard-empty">Loading applications…</div>:filteredApplications.length===0?<div className="dashboard-empty"><Users size={25}/><h3>{query?'No matching applications':'No applications yet'}</h3><p>{query?'Try another search.':'Applications submitted through the public careers page will appear here.'}</p></div>:<div className="dashboard-table-wrap"><table className="dashboard-table"><thead><tr><th>Candidate</th><th>Vacancy</th><th>Status</th><th>Received</th><th><span className="sr-only">Details</span></th></tr></thead><tbody>{filteredApplications.map(app=><tr key={app.id}><td><strong>{app.full_name}</strong><small>{app.email}</small></td><td>{app.jobs?.title||'Vacancy'}</td><td><select className="status-select" value={app.status} onChange={e=>void updateApplication(app,{status:e.target.value as ApplicationStatus})} disabled={busyId===app.id} aria-label={`Application status for ${app.full_name}`}>{statuses.map(status=><option key={status} value={status}>{titleCase(status)}</option>)}</select></td><td>{localDate(app.created_at)}</td><td><button className="btn small darkoutline" onClick={()=>setSelectedApplication(app)}>Review</button></td></tr>)}</tbody></table></div>}
       </section>}
       {selectedApplication&&<div className="dashboard-modal-backdrop" onMouseDown={event=>{if(event.target===event.currentTarget)setSelectedApplication(null);}}><section className="dashboard-modal" role="dialog" aria-modal="true" aria-labelledby="application-detail-title"><div className="dashboard-modal-heading"><div><div className="eyebrow"><i/>APPLICATION REVIEW</div><h2 id="application-detail-title">{selectedApplication.full_name}</h2><p>{selectedApplication.jobs?.title||'Vacancy'} · received {localDate(selectedApplication.created_at)}</p></div><button className="icon-button" onClick={()=>setSelectedApplication(null)} aria-label="Close application"><X size={20}/></button></div><div className="application-contact"><a href={`mailto:${selectedApplication.email}`}>{selectedApplication.email}</a><a href={`tel:${selectedApplication.phone}`}>{selectedApplication.phone}</a><span>{selectedApplication.location}</span></div><div className="application-copy"><h3>Experience</h3><p>{selectedApplication.experience_summary}</p><h3>Cover letter</h3><p>{selectedApplication.cover_letter}</p></div><label className="application-notes">Internal notes<textarea rows={4} value={selectedApplication.internal_notes||''} onChange={event=>setSelectedApplication({...selectedApplication,internal_notes:event.target.value})}/></label><div className="dashboard-form-actions"><button className="btn darkoutline" onClick={()=>void openCv(selectedApplication)} disabled={busyId===selectedApplication.id}><Download size={16}/>{busyId===selectedApplication.id?'Preparing CV…':'Download CV'}</button><button className="btn" onClick={()=>void updateApplication(selectedApplication,{internal_notes:selectedApplication.internal_notes||''})} disabled={busyId===selectedApplication.id}>{busyId===selectedApplication.id?'Saving…':'Save notes'}</button></div></section></div>}
+      {deletingJob&&<div className="dashboard-modal-backdrop" onMouseDown={event=>{if(event.target===event.currentTarget)setDeletingJob(null);}}><section className="dashboard-modal" role="alertdialog" aria-modal="true" aria-labelledby="delete-vacancy-title"><div className="dashboard-modal-heading"><div><div className="eyebrow"><i/>PERMANENT ACTION</div><h2 id="delete-vacancy-title">Delete this vacancy?</h2><p><strong>{deletingJob.title}</strong> will be permanently removed. This cannot be undone.</p></div><button className="icon-button" onClick={()=>setDeletingJob(null)} aria-label="Cancel deletion"><X size={20}/></button></div><div className="dashboard-form-actions"><button className="btn darkoutline" onClick={()=>setDeletingJob(null)} disabled={busyId===deletingJob.id}>Cancel</button><button className="btn danger-button" onClick={()=>void deleteJob(deletingJob)} disabled={busyId===deletingJob.id}><Trash2 size={15}/>{busyId===deletingJob.id?'Deleting…':'Delete vacancy'}</button></div></section></div>}
       <footer className="dashboard-footer"><ShieldCheck size={15}/> Candidate details and CVs are available only to authorised recruitment staff.</footer>
     </main>
   </div>;
