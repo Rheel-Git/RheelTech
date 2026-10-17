@@ -4,6 +4,7 @@ import type {Session} from '@supabase/supabase-js';
 import {ArrowRight, ShieldCheck} from 'lucide-react';
 import {Link} from 'react-router-dom';
 import {supabase, supabaseConfigured} from './lib/supabase';
+import CareersDashboard from './CareersDashboard';
 
 type StaffRole = 'admin' | 'recruiter';
 type AccessState = 'checking' | 'authorized' | 'denied' | 'error';
@@ -98,7 +99,7 @@ export default function Admin(){
 
   if(session&&accessState==='error')return <main className="adminlogin"><Link className="brand" to="/"><b>R</b><span>RHEELTECH<small>STAFF ACCESS</small></span></Link><section className="login"><div className="eyebrow"><i/>ACCESS CHECK</div><h1>We could not verify staff access</h1><p>Please try again in a moment. The portal stays locked until your staff profile is confirmed.</p><button className="btn" onClick={()=>setSession({...session})}>Try again</button><button className="reset" onClick={signOut}>Sign out</button></section></main>;
 
-  if(session&&accessState==='authorized')return <div className="admin"><aside><Link className="brand invert" to="/"><b>R</b><span>RHEELTECH<small>CAREERS STAFF PORTAL</small></span></Link><div className="admin-nav-label">Signed in as<br/><strong>{role==='admin'?'Administrator':'Recruiter'}</strong></div><button onClick={signOut}>Sign out</button></aside><main><div className="eyebrow"><i/>SECURE STAFF AREA</div><h1>Careers portal</h1><p>Your sign-in and recruitment staff profile have been verified.</p><section className="state admin-welcome"><ShieldCheck/><div><h2>Welcome to the careers backend</h2><p>Your account is authorised as a {role}. Recruitment records and CVs remain protected by Supabase access policies.</p></div></section><p className="admin-return"><Link className="btn darkoutline" to="/careers">View public careers page</Link></p></main></div>;
+  if(session&&accessState==='authorized'&&role)return <CareersDashboard role={role} onSignOut={()=>{void signOut();}}/>;
 
   return <main className="adminlogin"><Link className="brand" to="/"><b>R</b><span>RHEELTECH<small>STAFF ACCESS</small></span></Link><section className="login"><div className="eyebrow"><i/>SECURE STAFF ACCESS</div><h1>Sign in to the careers portal</h1><p>Use the account provided by a RheelTech administrator.</p><form onSubmit={login}><label>Work email<input type="email" autoComplete="username" value={email} onChange={event=>setEmail(event.target.value)} required/></label><label>Password<input type="password" autoComplete="current-password" value={password} onChange={event=>setPassword(event.target.value)} required/></label><button className="btn" disabled={busy}>{busy?'Signing in…':'Sign in'}<ArrowRight size={15}/></button><button type="button" className="reset" onClick={resetPassword} disabled={busy}>Reset password</button>{message&&<p role="status">{message}</p>}</form></section><Link className="admin-back" to="/">← Back to RheelTech website</Link></main>;
 }
