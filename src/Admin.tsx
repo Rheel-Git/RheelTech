@@ -26,9 +26,10 @@ export default function Admin(){
     const {data:{subscription}}=supabase.auth.onAuthStateChange((event,nextSession)=>{
       setSession(nextSession);
       setAuthReady(true);
-      setRecoveryMode(event==='PASSWORD_RECOVERY');
+      setRecoveryMode(event==='PASSWORD_RECOVERY'||window.location.hash.includes('type=invite'));
       setMessage('');
     });
+    if(window.location.hash.includes('type=invite'))setRecoveryMode(true);
     void supabase.auth.getSession().then(({data,error})=>{
       if(!error)setSession(data.session);
       setAuthReady(true);
@@ -40,10 +41,10 @@ export default function Admin(){
     if(!supabase||!authReady||!session){setRole(null);setAccessState('checking');return;}
     let active=true;
     setAccessState('checking');
-    void supabase.from('admin_profiles').select('role').eq('user_id',session.user.id).maybeSingle().then(({data,error})=>{
+    void supabase.from('admin_profiles').select('role,is_active').eq('user_id',session.user.id).maybeSingle().then(({data,error})=>{
       if(!active)return;
       if(error){setAccessState('error');return;}
-      if(data?.role==='admin'||data?.role==='recruiter'){
+      if(data?.is_active===true&&(data.role==='admin'||data.role==='recruiter')){
         setRole(data.role);
         setAccessState('authorized');
       }else{
@@ -79,6 +80,7 @@ export default function Admin(){
     const {error}=await supabase.auth.updateUser({password:newPassword});
     setBusy(false);
     if(error){setMessage('Password could not be updated. Please request another reset link.');return;}
+    window.history.replaceState({},document.title,window.location.pathname);
     setRecoveryMode(false);setNewPassword('');
     setMessage('Password updated. Your staff access is being checked.');
   }

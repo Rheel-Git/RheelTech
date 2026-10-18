@@ -13,9 +13,42 @@ Without Supabase settings, public informational pages work and forms report setu
 
 ## Supabase setup
 
-Create a Supabase project, then apply `supabase/migrations/202610160001_careers.sql` with Supabase CLI. Create the first admin/recruiter by creating an Auth user through the controlled dashboard and inserting its UUID into `admin_profiles` using a trusted SQL editor. Never permit public signup or let users edit this table. Deploy `submit-application` and `contact-enquiry` Edge Functions separately. Set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, and `CONTACT_NOTIFICATION_EMAIL` as function secrets only. Confirm the Resend sender domain and configure an approved sender before production.
+Create a Supabase project, then apply the migrations with the Supabase CLI. The application idempotency/email migration must be applied before deploying the updated `submit-application` function. Create the first admin/recruiter by creating an Auth user through the controlled dashboard and inserting its UUID into `admin_profiles` using a trusted SQL editor. Never permit public signup or let users edit this table.
 
-The current submission function validates fields and vacancy status; rate limiting, antivirus scanning, stronger CV ownership proof, notification email for applications and CAPTCHA/honeypot protection remain required before production. The bucket accepts only UUID-named PDF uploads and remains private, but abuse controls must be added before recruitment launches.
+### Staging Edge Function deployment and email secrets
+
+The commands below target only the RheelTech-Staging project (`oyfrihexkaaozsniezxk`). Run them from the repository root after installing and authenticating the Supabase CLI. This checkout currently has no `supabase/config.toml`; run `supabase init` once from the repository root to create the CLI configuration, then review the generated file before continuing. Do not use the production project ref.
+
+1. Create an ignored `supabase/.env.staging` file with these values, using the verified Resend sender and the real recruitment inbox:
+
+   ```dotenv
+   RESEND_API_KEY=replace-with-your-resend-api-key
+   RESEND_FROM_EMAIL="RheelTech Website <notifications@mail.rheeltech.ng>"
+   CONTACT_NOTIFICATION_EMAIL=replace-with-your-contact-inbox
+   # Optional; defaults to CONTACT_NOTIFICATION_EMAIL.
+   RECRUITMENT_NOTIFICATION_EMAIL=replace-with-your-recruitment-inbox
+   ```
+
+   Keep the file private. `.env.*` is Git-ignored. Supabase provides `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to Edge Functions at runtime; do not add either to this file, Vercel, or client-side code.
+
+2. Link staging and inspect its migration history before applying anything. The careers schema was previously applied through the Dashboard, so do not run `db push` if the original migration is shown as pending; first reconcile CLI migration history with the actual staging schema. Then apply the new idempotency migration, configure secrets and deploy both functions:
+
+   ```sh
+   supabase init
+   supabase login
+   supabase link --project-ref oyfrihexkaaozsniezxk
+   supabase migration list --linked
+   supabase db push --linked
+   supabase secrets set --env-file supabase/.env.staging --project-ref oyfrihexkaaozsniezxk
+   supabase functions deploy contact-enquiry --project-ref oyfrihexkaaozsniezxk
+   supabase functions deploy submit-application --project-ref oyfrihexkaaozsniezxk
+   ```
+
+   The secrets and function commands explicitly target staging, not production. Only continue with `db push` after confirming the previously applied careers schema is recorded as applied. Deploy after the new migration so the submission function can use the idempotency and email-status columns.
+
+Contact enquiries are sent to `CONTACT_NOTIFICATION_EMAIL`; the visitor address is retained as the reply-to. Career applications are saved first, then the applicant receives a short receipt and the recruitment inbox receives only the candidate name, email, vacancy title and received time. CVs, phone numbers, location, experience and cover letters are not emailed. A missing or failed email does not undo an application; the form reports that the application was received and whether the applicant receipt email was sent. A stable per-form submission key and unique database index make retries reuse the original application.
+
+The submission endpoint still needs its separately planned abuse controls, malware scanning and tighter origin/rate-limit protections before production. The private bucket accepts UUID-named PDF uploads; review existing storage policies and application access controls before production. Email delivery is best effort: if Resend accepts an email but the subsequent delivery-status database update fails, a later retry could send that email again. The unique submission key still prevents a second application record.
 
 ## GitHub Pages and domain
 

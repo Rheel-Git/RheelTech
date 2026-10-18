@@ -1,8 +1,9 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import type {FormEvent} from 'react';
-import {ArrowUpRight, BriefcaseBusiness, Check, CircleAlert, Download, FileText, Pencil, Plus, RefreshCw, Search, ShieldCheck, Trash2, Users, X} from 'lucide-react';
+import {ArrowUpRight, BriefcaseBusiness, Check, CircleAlert, Download, FileText, Pencil, Plus, RefreshCw, Search, ShieldCheck, Trash2, UserRoundPlus, Users, X} from 'lucide-react';
 import {Link} from 'react-router-dom';
 import {supabase} from './lib/supabase';
+import StaffManagement from './StaffManagement';
 
 type StaffRole='admin'|'recruiter';
 type JobStatus='draft'|'published'|'closed'|'archived';
@@ -19,7 +20,7 @@ const titleCase=(value:string)=>value.replaceAll('_',' ').replace(/\b\w/g,c=>c.t
 const localDate=(value:string|null)=>value?new Date(value).toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'}):'No closing date';
 
 export default function CareersDashboard({role,onSignOut}:{role:StaffRole;onSignOut:()=>void}){
-  const [tab,setTab]=useState<'jobs'|'applications'>('jobs');
+  const [tab,setTab]=useState<'jobs'|'applications'|'users'>('jobs');
   const [jobs,setJobs]=useState<Job[]>([]);
   const [applications,setApplications]=useState<Application[]>([]);
   const [loading,setLoading]=useState(true);
@@ -102,10 +103,11 @@ export default function CareersDashboard({role,onSignOut}:{role:StaffRole;onSign
   return <div className="dashboard">
     <aside className="dashboard-sidebar">
       <Link className="brand invert" to="/"><b>R</b><span>RHEELTECH<small>CAREERS STAFF PORTAL</small></span></Link>
-      <div className="dashboard-user"><span>Signed in as</span><strong>{role==='admin'?'Administrator':'Recruiter'}</strong></div>
+      <div className="dashboard-user"><span>Signed in as</span><strong>{role==='admin'?'Administrator':'Recruitment Manager'}</strong></div>
       <nav aria-label="Careers management">
         <button className={tab==='jobs'?'selected':''} onClick={()=>{setTab('jobs');setSelectedApplication(null);setError('');}}><BriefcaseBusiness size={17}/> Vacancies <span>{counts.total}</span></button>
         <button className={tab==='applications'?'selected':''} onClick={()=>{setTab('applications');setEditor(null);setError('');}}><Users size={17}/> Applications <span>{counts.applications}</span></button>
+        {role==='admin'&&<button className={tab==='users'?'selected':''} onClick={()=>{setTab('users');setEditor(null);setSelectedApplication(null);setError('');}}><UserRoundPlus size={17}/> Users</button>}
       </nav>
       <div className="dashboard-sidebar-bottom"><Link to="/careers">View public careers page ↗</Link><button onClick={onSignOut}>Sign out</button></div>
     </aside>
@@ -119,6 +121,8 @@ export default function CareersDashboard({role,onSignOut}:{role:StaffRole;onSign
       </section>
       {error&&<div className="dashboard-alert" role="alert"><CircleAlert size={18}/>{error}<button onClick={()=>setError('')} aria-label="Dismiss"><X size={16}/></button></div>}
       {notice&&<div className="dashboard-notice" role="status"><Check size={17}/>{notice}<button onClick={()=>setNotice('')} aria-label="Dismiss"><X size={16}/></button></div>}
+
+      {tab==='users'&&role==='admin'&&<StaffManagement/>}
 
       {tab==='jobs'&&<section className="dashboard-panel">
         <div className="dashboard-panel-heading"><div><h2>Vacancies</h2><p>Create, update and publish job listings.</p></div><button className="btn" onClick={startNewJob}><Plus size={16}/> New vacancy</button></div>
