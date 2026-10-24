@@ -1,2 +1,61 @@
-const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type'};
-Deno.serve(async(req)=>{if(req.method==='OPTIONS')return new Response('ok',{headers:cors});if(req.method!=='POST')return new Response('Method not allowed',{status:405,headers:cors});try{const b=await req.json();if(!['full_name','email','enquiry_type','message'].every(k=>typeof b[k]==='string'&&b[k].trim())||b.message.length>10000)return Response.json({error:'Invalid enquiry'},{status:400,headers:cors});const api=Deno.env.get('RESEND_API_KEY'),to=Deno.env.get('CONTACT_NOTIFICATION_EMAIL');if(!api||!to)return Response.json({error:'Contact workflow is not configured'},{status:503,headers:cors});const resp=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${api}`,'Content-Type':'application/json'},body:JSON.stringify({from:'RheelTech Website <onboarding@resend.dev>',to:[to],reply_to:b.email,subject:`Website enquiry: ${b.enquiry_type}`,text:`Name: ${b.full_name}\nEmail: ${b.email}\nOrganisation: ${b.organisation||'—'}\nType: ${b.enquiry_type}\n\n${b.message}`})});if(!resp.ok)throw new Error('email failed');return Response.json({ok:true},{headers:cors});}catch{return Response.json({error:'Unable to send enquiry'},{status:500,headers:cors});}});
+import { getResendConfig, isValidEmail, sendResendEmail } from '../_shared/email.ts';
+
+const cors = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+function json(body: unknown, status = 200): Response {
+  return Response.json(body, { status, headers: cors });
+}
+
+Deno.serve(async (request) => {
+  if (request.method === 'OPTIONS') return new Response('ok', { headers: cors });
+  if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
+
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return json({ error: 'Enter a valid enquiry.' }, 400);
+    }
+  } catch {
+    return json({ error: 'Enter a valid enquiry.' }, 400);
+  }
+
+  const fullName = typeof body.full_name === 'string' ? body.full_name.trim() : '';
+  const email = typeof body.email === 'string' ? body.email.trim() : '';
+  const enquiryType = typeof body.enquiry_type === 'string' ? body.enquiry_type.trim() : '';
+  const message = typeof body.message === 'string' ? body.message.trim() : '';
+  const organisation = typeof body.organisation === 'string' ? body.organisation.trim() : '';
+
+  if (!fullName || fullName.length > 200 || !isValidEmail(email) || !enquiryType || enquiryType.length > 120 || !message || message.length > 10000 || organisation.length > 200) {
+    return json({ error: 'Check the required fields and try again.' }, 400);
+  }
+
+  const to = Deno.env.get('CONTACT_NOTIFICATION_EMAIL')?.trim() ?? '';
+  const config = getResendConfig();
+  if (!config || !isValidEmail(to)) {
+    console.error(JSON.stringify({ event: 'contact_email_not_configured' }));
+    return json({ error: 'The enquiry email service is not configured. Please email hello@rheeltech.ng.' }, 503);
+  }
+
+  const sent = await sendResendEmail({
+    config,
+    to,
+    replyTo: email,
+    subject: `Website enquiry: ${enquiryType.replace(/[\r\n\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim()}`,
+    text: [
+      `Name: ${fullName}`,
+      `Email: ${email}`,
+      `Organisation: ${organisation || '—'}`,
+      `Type: ${enquiryType}`,
+      '',
+      message,
+    ].join('\n'),
+  });
+
+  if (!sent) return json({ error: 'We could not send your enquiry. Please try again later or email hello@rheeltech.ng.' }, 502);
+  return json({ ok: true });
+});

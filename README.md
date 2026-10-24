@@ -13,9 +13,42 @@ Without Supabase settings, public informational pages work and forms report setu
 
 ## Supabase setup
 
-Create a Supabase project, then apply `supabase/migrations/202610160001_careers.sql` with Supabase CLI. Create the first admin/recruiter by creating an Auth user through the controlled dashboard and inserting its UUID into `admin_profiles` using a trusted SQL editor. Never permit public signup or let users edit this table. Deploy `submit-application` and `contact-enquiry` Edge Functions separately. Set `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, and `CONTACT_NOTIFICATION_EMAIL` as function secrets only. Confirm the Resend sender domain and configure an approved sender before production.
+Create a Supabase project, then apply the migrations with the Supabase CLI. The application idempotency/email migration must be applied before deploying the updated `submit-application` function. Create the first admin/recruiter by creating an Auth user through the controlled dashboard and inserting its UUID into `admin_profiles` using a trusted SQL editor. Never permit public signup or let users edit this table.
 
-The current submission function validates fields and vacancy status; rate limiting, antivirus scanning, stronger CV ownership proof, notification email for applications and CAPTCHA/honeypot protection remain required before production. The bucket accepts only UUID-named PDF uploads and remains private, but abuse controls must be added before recruitment launches.
+### Staging Edge Function deployment and email secrets
+
+The commands below target only the RheelTech-Staging project (`oyfrihexkaaozsniezxk`). Run them from the repository root after installing and authenticating the Supabase CLI. This checkout currently has no `supabase/config.toml`; run `supabase init` once from the repository root to create the CLI configuration, then review the generated file before continuing. Do not use the production project ref.
+
+1. Create an ignored `supabase/.env.staging` file with these values, using the verified Resend sender and the real recruitment inbox:
+
+   ```dotenv
+   RESEND_API_KEY=replace-with-your-resend-api-key
+   RESEND_FROM_EMAIL="RheelTech Website <notifications@mail.rheeltech.ng>"
+   CONTACT_NOTIFICATION_EMAIL=replace-with-your-contact-inbox
+   # Optional; defaults to CONTACT_NOTIFICATION_EMAIL.
+   RECRUITMENT_NOTIFICATION_EMAIL=replace-with-your-recruitment-inbox
+   ```
+
+   Keep the file private. `.env.*` is Git-ignored. Supabase provides `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` to Edge Functions at runtime; do not add either to this file, Vercel, or client-side code.
+
+2. Link staging and inspect its migration history before applying anything. The careers schema was previously applied through the Dashboard, so do not run `db push` if the original migration is shown as pending; first reconcile CLI migration history with the actual staging schema. Then apply the new idempotency migration, configure secrets and deploy both functions:
+
+   ```sh
+   supabase init
+   supabase login
+   supabase link --project-ref oyfrihexkaaozsniezxk
+   supabase migration list --linked
+   supabase db push --linked
+   supabase secrets set --env-file supabase/.env.staging --project-ref oyfrihexkaaozsniezxk
+   supabase functions deploy contact-enquiry --project-ref oyfrihexkaaozsniezxk
+   supabase functions deploy submit-application --project-ref oyfrihexkaaozsniezxk
+   ```
+
+   The secrets and function commands explicitly target staging, not production. Only continue with `db push` after confirming the previously applied careers schema is recorded as applied. Deploy after the new migration so the submission function can use the idempotency and email-status columns.
+
+Contact enquiries are sent to `CONTACT_NOTIFICATION_EMAIL`; the visitor address is retained as the reply-to. Career applications are saved first, then the applicant receives a short receipt and the recruitment inbox receives only the candidate name, email, vacancy title and received time. CVs, phone numbers, location, experience and cover letters are not emailed. A missing or failed email does not undo an application; the form reports that the application was received and whether the applicant receipt email was sent. A stable per-form submission key and unique database index make retries reuse the original application.
+
+The submission endpoint still needs its separately planned abuse controls, malware scanning and tighter origin/rate-limit protections before production. The private bucket accepts UUID-named PDF uploads; review existing storage policies and application access controls before production. Email delivery is best effort: if Resend accepts an email but the subsequent delivery-status database update fails, a later retry could send that email again. The unique submission key still prevents a second application record.
 
 ## GitHub Pages and domain
 
@@ -25,8 +58,8 @@ The current submission function validates fields and vacancy status; rate limiti
 4. Add the repository custom domain `rheeltech.ng` in Pages settings and complete domain verification.
 5. Review GitHub’s current Pages DNS values with the domain provider before changing records. For an apex domain use the four A records GitHub currently specifies and an optional AAAA set; add `www` as a CNAME to the repository Pages hostname only if desired. Do not change existing production DNS until the owner approves.
 6. Wait for DNS verification, enable Enforce HTTPS, and test `/`, every public route, refreshes, and the custom domain.
-7. Configure the Supabase URL and public key as GitHub Actions repository variables, then pass them as `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` to the build step if desired. They are public values; security depends on RLS. Never put service-role or email secrets in build variables.
+7. In GitHub repository Settings → Secrets and variables → Actions → Variables, configure `PRODUCTION_SUPABASE_URL`, `PRODUCTION_SUPABASE_PUBLISHABLE_KEY`, and `PRODUCTION_CAREERS_GATEWAY_URL` for the production build. The Pages workflow maps these to the `VITE_*` variables and uses `/` as the base path for the apex domain. The Supabase URL, publishable key and gateway URL are public frontend configuration; access control depends on RLS and the gateway signature design. Never put a Supabase service-role/secret key, Resend key, or HMAC secret in build variables.
 
 ## Current limitations
 
-The admin view has secure Supabase sign-in and setup/error messaging but full job CRUD and application review UI are not yet implemented. Contact and careers Edge Functions are starter workflows, not production-ready: add rate limits and abuse controls, enforce upload ownership, add application mail, validate content server-side, configure a verified sender, and test policies in Supabase. Privacy wording requires legal review. Product marks, founder name/photo, approved screenshots and social share art remain to be supplied.
+The protected `/admin` portal supports vacancy creation and editing, draft/published/closed/archived status, candidate application review, status updates, internal notes, and short-lived signed links to private CVs. These screens rely on the Supabase `admin_profiles`, `jobs`, `applications`, and private `private-cvs` bucket policies; the UI does not grant database access. Contact and careers Edge Functions still need the remaining abuse controls and staging policy tests described above before production. Privacy wording requires legal review. Product marks, founder name/photo, approved screenshots and social share art remain to be supplied.

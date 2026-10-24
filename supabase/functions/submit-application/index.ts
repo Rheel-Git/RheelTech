@@ -1,3 +1,73 @@
-import {createClient} from 'https://esm.sh/@supabase/supabase-js@2';
-const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization, x-client-info, apikey, content-type'};
-Deno.serve(async(req)=>{if(req.method==='OPTIONS')return new Response('ok',{headers:cors});if(req.method!=='POST')return new Response('Method not allowed',{status:405,headers:cors});try{const body=await req.json();const required=['job_id','full_name','email','phone','location','experience_summary','cover_letter','cv_storage_path'];if(!required.every(k=>typeof body[k]==='string'&&body[k].trim())||body.consent!==true||!body.cv_storage_path.endsWith('.pdf'))return Response.json({error:'Invalid submission'},{status:400,headers:cors});const client=createClient(Deno.env.get('SUPABASE_URL')!,Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);const {data:job}=await client.from('jobs').select('id').eq('id',body.job_id).eq('status','published').maybeSingle();if(!job)return Response.json({error:'Vacancy unavailable'},{status:404,headers:cors});const {data:obj}=await client.storage.from('private-cvs').createSignedUrl(body.cv_storage_path,30);if(!obj)return Response.json({error:'CV is not available'},{status:400,headers:cors});const{error}=await client.from('applications').insert({job_id:body.job_id,full_name:body.full_name.trim().slice(0,200),email:body.email.trim().slice(0,320),phone:body.phone.trim().slice(0,80),location:body.location.trim().slice(0,200),experience_summary:body.experience_summary.trim().slice(0,10000),cover_letter:body.cover_letter.trim().slice(0,12000),cv_storage_path:body.cv_storage_path,consent_at:new Date().toISOString()});if(error)throw error;return Response.json({ok:true},{headers:cors});}catch{return Response.json({error:'Unable to process application'},{status:500,headers:cors});}});
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { getResendConfig, isValidEmail, sendResendEmail } from '../_shared/email.ts';
+import { createSubmitApplicationHandler, type ApplicationInsert, type ApplicationRecord } from './core.ts';
+
+function createRepository() {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  // The service credential remains in the Edge Function runtime. It is never
+  // returned to or used by browser code. Storage keeps its existing private policies.
+  const client = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
+
+  return {
+    async getApplicationByKey(key: string) {
+      const { data, error } = await client.from('applications')
+        .select('id,job_id,submission_key,full_name,email,cv_storage_path,created_at,confirmation_email_sent,recruitment_notification_sent')
+        .eq('submission_key', key).maybeSingle();
+      return { data: data as ApplicationRecord | null, error };
+    },
+    async getJob(jobId: string, publishedOnly: boolean) {
+      let query = client.from('jobs').select('id,title').eq('id', jobId);
+      if (publishedOnly) query = query.eq('status', 'published');
+      const { data, error } = await query.maybeSingle();
+      return { data, error };
+    },
+    async uploadCv(path: string, bytes: Uint8Array) {
+      const { error } = await client.storage.from('private-cvs').upload(path, new Blob([bytes], { type: 'application/pdf' }), {
+        contentType: 'application/pdf',
+        upsert: false,
+      });
+      if (!error) return { status: 'uploaded' as const };
+      const description = `${error.message || ''} ${error.statusCode || ''}`;
+      if (/already exists|duplicate/i.test(description) || String(error.statusCode) === '409') {
+        return { status: 'exists' as const };
+      }
+      return { status: 'error' as const, error };
+    },
+    async downloadCv(path: string) {
+      const { data, error } = await client.storage.from('private-cvs').download(path);
+      return { data: data ? new Uint8Array(await data.arrayBuffer()) : null, error };
+    },
+    async removeCv(path: string) {
+      const { error } = await client.storage.from('private-cvs').remove([path]);
+      return { error };
+    },
+    async saveApplication(values: ApplicationInsert) {
+      const { data, error } = await client.from('applications').insert(values)
+        .select('id,job_id,submission_key,full_name,email,cv_storage_path,created_at,confirmation_email_sent,recruitment_notification_sent')
+        .single();
+      return {
+        data: data as ApplicationRecord | null,
+        duplicate: error?.code === '23505',
+        error,
+      };
+    },
+    async setEmailSent(id: string, kind: 'confirmation_email_sent' | 'recruitment_notification_sent') {
+      const { error } = await client.from('applications').update({ [kind]: true }).eq('id', id);
+      return { error };
+    },
+  };
+}
+
+Deno.serve(createSubmitApplicationHandler({
+  env: (name) => Deno.env.get(name),
+  createRepository,
+  isValidEmail,
+  now: () => new Date().toISOString(),
+  log: (event) => console.error(JSON.stringify({ event })),
+  async sendEmail(input) {
+    const config = getResendConfig();
+    if (!config) return false;
+    return sendResendEmail({ config, ...input });
+  },
+}));
