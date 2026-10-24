@@ -28,7 +28,7 @@ jobs:
           VITE_SUPABASE_URL: ${{ vars.PRODUCTION_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.PRODUCTION_SUPABASE_PUBLISHABLE_KEY }}
           VITE_CAREERS_GATEWAY_URL: ${{ vars.PRODUCTION_CAREERS_GATEWAY_URL }}
-          VITE_BASE_PATH: /
+          VITE_BASE_PATH: /RheelTech/
         run: |
           test -n "$VITE_SUPABASE_URL" || { echo "Missing PRODUCTION_SUPABASE_URL repository variable"; exit 1; }
           test -n "$VITE_SUPABASE_ANON_KEY" || { echo "Missing PRODUCTION_SUPABASE_PUBLISHABLE_KEY repository variable"; exit 1; }
@@ -39,7 +39,7 @@ jobs:
           VITE_SUPABASE_URL: ${{ vars.PRODUCTION_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.PRODUCTION_SUPABASE_PUBLISHABLE_KEY }}
           VITE_CAREERS_GATEWAY_URL: ${{ vars.PRODUCTION_CAREERS_GATEWAY_URL }}
-          VITE_BASE_PATH: /
+          VITE_BASE_PATH: /RheelTech/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
