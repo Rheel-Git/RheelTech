@@ -58,7 +58,7 @@ The submission endpoint still needs its separately planned abuse controls, malwa
 4. Add the repository custom domain `rheeltech.ng` in Pages settings and complete domain verification.
 5. Review GitHub’s current Pages DNS values with the domain provider before changing records. For an apex domain use the four A records GitHub currently specifies and an optional AAAA set; add `www` as a CNAME to the repository Pages hostname only if desired. Do not change existing production DNS until the owner approves.
 6. Wait for DNS verification, enable Enforce HTTPS, and test `/`, every public route, refreshes, and the custom domain.
-7. Configure the Supabase URL and public key as GitHub Actions repository variables, then pass them as `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` to the build step if desired. They are public values; security depends on RLS. Never put service-role or email secrets in build variables.
+7. In GitHub repository Settings → Secrets and variables → Actions → Variables, configure `PRODUCTION_SUPABASE_URL`, `PRODUCTION_SUPABASE_PUBLISHABLE_KEY`, and `PRODUCTION_CAREERS_GATEWAY_URL` for the production build. The Pages workflow maps these to the `VITE_*` variables and uses `/` as the base path for the apex domain. The Supabase URL, publishable key and gateway URL are public frontend configuration; access control depends on RLS and the gateway signature design. Never put a Supabase service-role/secret key, Resend key, or HMAC secret in build variables.
 
 ## Current limitations
 

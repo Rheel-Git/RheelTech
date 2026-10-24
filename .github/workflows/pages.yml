@@ -23,7 +23,23 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm run build
+      - name: Verify production build configuration
+        env:
+          VITE_SUPABASE_URL: ${{ vars.PRODUCTION_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.PRODUCTION_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_CAREERS_GATEWAY_URL: ${{ vars.PRODUCTION_CAREERS_GATEWAY_URL }}
+          VITE_BASE_PATH: /
+        run: |
+          test -n "$VITE_SUPABASE_URL" || { echo "Missing PRODUCTION_SUPABASE_URL repository variable"; exit 1; }
+          test -n "$VITE_SUPABASE_ANON_KEY" || { echo "Missing PRODUCTION_SUPABASE_PUBLISHABLE_KEY repository variable"; exit 1; }
+          test -n "$VITE_CAREERS_GATEWAY_URL" || { echo "Missing PRODUCTION_CAREERS_GATEWAY_URL repository variable"; exit 1; }
+      - name: Build production site
+        run: pnpm run build
+        env:
+          VITE_SUPABASE_URL: ${{ vars.PRODUCTION_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.PRODUCTION_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_CAREERS_GATEWAY_URL: ${{ vars.PRODUCTION_CAREERS_GATEWAY_URL }}
+          VITE_BASE_PATH: /
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
