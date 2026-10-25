@@ -86,3 +86,75 @@ html, body, #root { width: 100%; min-width: 320px; min-height: 100%; }
     margin: 0;
   }
 }
+
+/* The staff workspace uses a stacked shell on phones and compact tablet viewports. */
+@media (max-width: 850px) {
+  html, body, #root {
+    width: 100%;
+    min-width: 320px;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  .dashboard {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin: 0;
+    overflow-x: hidden;
+  }
+  .dashboard-sidebar {
+    position: relative;
+    top: auto;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    height: auto;
+    padding: 14px 17px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+  }
+  .dashboard-user { display: none; }
+  .dashboard-sidebar nav {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    min-width: 0;
+    gap: 7px;
+  }
+  .dashboard-sidebar nav button {
+    width: 100%;
+    min-width: 0;
+    justify-content: flex-start;
+    padding: 10px 9px;
+    font-size: 11px;
+  }
+  .dashboard-sidebar nav button span { margin-left: auto; }
+  .dashboard-sidebar-bottom {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 11px 3px 1px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .dashboard-main {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 23px 14px;
+  }
+  .dashboard-main > *, .dashboard-header, .dashboard-panel, .dashboard-stats {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .dashboard-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
