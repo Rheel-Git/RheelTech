@@ -18,7 +18,7 @@ export default function Admin(){
   const [password,setPassword]=useState('');
   const [newPassword,setNewPassword]=useState('');
   const [busy,setBusy]=useState(false);
-  const [recoveryMode,setRecoveryMode]=useState(false);
+  const [recoveryMode,setRecoveryMode]=useState(()=>{const query=new URLSearchParams(window.location.search);const hash=new URLSearchParams(window.location.hash.slice(1));return query.get('flow')==='recovery'||hash.get('type')==='recovery'||hash.get('type')==='invite';});
   const [message,setMessage]=useState('');
 
   useEffect(()=>{
@@ -26,7 +26,8 @@ export default function Admin(){
     const {data:{subscription}}=supabase.auth.onAuthStateChange((event,nextSession)=>{
       setSession(nextSession);
       setAuthReady(true);
-      setRecoveryMode(event==='PASSWORD_RECOVERY'||window.location.hash.includes('type=invite'));
+      const query=new URLSearchParams(window.location.search);const hash=new URLSearchParams(window.location.hash.slice(1));
+      setRecoveryMode(event==='PASSWORD_RECOVERY'||query.get('flow')==='recovery'||hash.get('type')==='recovery'||hash.get('type')==='invite');
       setMessage('');
     });
     if(window.location.hash.includes('type=invite'))setRecoveryMode(true);
