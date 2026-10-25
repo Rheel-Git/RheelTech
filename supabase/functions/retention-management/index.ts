@@ -38,10 +38,9 @@ Deno.serve(async (request) => {
   if (request.method !== 'POST') return reply(request, { error: 'Method not allowed.' }, 405);
 
   const url = Deno.env.get('SUPABASE_URL');
-  const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
   const token = (request.headers.get('authorization') || '').match(/^Bearer\s+(.+)$/i)?.[1];
-  if (!url || !anonKey || !serviceKey || !token) return reply(request, { error: 'Retention review is temporarily unavailable.' }, 503);
+  if (!url || !serviceKey || !token) return reply(request, { error: 'Retention review is temporarily unavailable.' }, 503);
 
   let body: Record<string, unknown>;
   try {
@@ -52,11 +51,9 @@ Deno.serve(async (request) => {
     return reply(request, { error: 'The request is invalid.' }, 400);
   }
 
-  const caller = createClient(url, anonKey, { global: { headers: { Authorization: `Bearer ${token}` } }, auth: { persistSession: false } });
-  const { data: authData, error: authError } = await caller.auth.getUser();
-  if (authError || !authData.user) return reply(request, { error: 'Sign in again to continue.' }, 401);
-
   const admin = createClient(url, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+  const { data: authData, error: authError } = await admin.auth.getUser(token);
+  if (authError || !authData.user) return reply(request, { error: 'Sign in again to continue.' }, 401);
   const { data: profile, error: profileError } = await admin.from('admin_profiles')
     .select('role,is_active').eq('user_id', authData.user.id).maybeSingle();
   if (profileError) return reply(request, { error: 'Staff access could not be verified.' }, 503);
