@@ -6,7 +6,10 @@ export const DEFAULT_STAFF_ORIGINS = Object.freeze([
 
 export function getStaffOrigins(configuredOrigins = '', projectRef = '') {
   const origins = new Set(DEFAULT_STAFF_ORIGINS);
-  if (projectRef === 'dxhzukuramncuhukonex') origins.add('https://rheel-git.github.io');
+  if (projectRef === 'dxhzukuramncuhukonex') {
+    origins.add('https://rheel-git.github.io');
+    origins.add('https://rheeltech.ng');
+  }
   for (const entry of configuredOrigins.split(',')) {
     const candidate = entry.trim();
     if (!candidate) continue;
