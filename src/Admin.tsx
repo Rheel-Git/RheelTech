@@ -68,7 +68,7 @@ export default function Admin(){
     if(!supabase)return;
     if(!email.trim()){setMessage('Enter your staff email address first.');return;}
     setBusy(true);setMessage('');
-    const {error}=await supabase.auth.resetPasswordForEmail(email.trim(),{redirectTo:`${window.location.origin}/admin`});
+    const {error}=await supabase.auth.resetPasswordForEmail(email.trim(),{redirectTo:new URL('admin',new URL(import.meta.env.BASE_URL,window.location.origin)).toString()});
     setMessage(error?'Password reset could not be started.':'If an account exists for that address, a reset email has been sent.');
     setBusy(false);
   }
