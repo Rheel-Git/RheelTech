@@ -83,6 +83,11 @@ async function audit(admin: AdminClient, actorId: string, actorEmail: string, ta
   if (error) throw error;
 }
 
+function staffPortalRedirect(origin: string): string {
+  const path = origin === 'https://rheel-git.github.io' ? '/RheelTech/admin' : '/admin';
+  return `${origin}${path}`;
+}
+
 async function createSetupLink(admin: AdminClient, email: string, redirectTo: string, linkType: 'invite' | 'recovery') {
   const { data, error } = await admin.auth.admin.generateLink({
     type: linkType,
@@ -175,7 +180,7 @@ Deno.serve(async (request) => {
         if (error) throw error;
         if (existingProfile) return json(request, { error: 'This user already has staff access.' }, 409);
       }
-      const { user, actionLink } = await createSetupLink(admin, email, `${origin}/admin`, existing ? 'recovery' : 'invite');
+      const { user, actionLink } = await createSetupLink(admin, email, staffPortalRedirect(origin), existing ? 'recovery' : 'invite');
       const targetUserId = user.id;
       const { error: profileInsertError } = await admin.rpc('careers_apply_staff_change', {
         p_actor_user_id: actorId,
@@ -271,7 +276,7 @@ Deno.serve(async (request) => {
       if (!profile.is_active) return json(request, { error: 'Reactivate this account before sending a setup link.' }, 409);
       const mailConfig = getResendConfig();
       if (!mailConfig) return json(request, { error: 'Invitation email is not configured on staging.' }, 503);
-      const { actionLink } = await createSetupLink(admin, targetEmail, `${origin}/admin`, 'recovery');
+      const { actionLink } = await createSetupLink(admin, targetEmail, staffPortalRedirect(origin), 'recovery');
       const emailSent = await sendResendEmail({
         config: mailConfig,
         to: targetEmail,
