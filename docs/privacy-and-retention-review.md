@@ -45,7 +45,7 @@ Successful candidates' records should move to a separately approved employee-rec
 
 1. Provide a monitored privacy contact and a simple intake path for access, correction, objection, restriction, portability, consent withdrawal, and erasure requests. Verify identity proportionately; do not ask for excessive identity documents.
 2. Record the request date, request type, systems searched, owner, deadline, outcome, and any legal exception. The public notice should give the applicable complaint route to the NDPC.
-3. For scheduled expiry or an approved erasure request, locate the application, delete its private CV object, then delete or irreversibly de-identify the application record. Make the job retryable and idempotent; if file deletion fails, retain the record for retry and raise an administrator alert. Preserve only a minimal, non-identifying completion audit.
+3. For scheduled expiry or an approved erasure request, locate the application, delete its private CV object through the Supabase Storage API, then delete or irreversibly de-identify the application record. Never delete Storage object metadata directly with SQL; that can orphan the underlying file. Make the job retryable and idempotent; if file deletion fails, retain the record for retry and raise an administrator alert. Preserve only a minimal, non-identifying completion audit.
 4. Handle contact-enquiry copies in the recipient mailbox, forwarding rules, and archives under a separate mailbox procedure.
 5. Apply deletion decisions after a backup restore so expired records are not silently reintroduced. Document provider backup expiry and any unavoidable residual copies.
 6. Keep a dry-run report and require an operator to review affected record counts before the first production cleanup. Do not expose names, email addresses, CV paths, or other applicant details in routine job logs.
@@ -74,3 +74,5 @@ Successful candidates' records should move to a separately approved employee-rec
 ## Draft notice
 
 A separate publication candidate is in [privacy-notice-draft.md](privacy-notice-draft.md). It remains internal until its checklist is closed and the notice accurately describes an implemented deletion process.
+
+- [Supabase Storage object deletion guidance](https://supabase.com/docs/guides/storage/management/delete-objects)
