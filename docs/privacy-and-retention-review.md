@@ -1,6 +1,6 @@
 # Privacy notice and retention review
 
-**Status:** Internal review draft. The business address and operational schedule have been provided/approved by the company for drafting. Legal, transfer, processor, mailbox, and implementation review remain open. This document is not the public privacy notice and does not authorize deletion or automated purging of production records.
+**Status:** Internal review draft. The business address, proposed lawful bases, retention schedule, transfer-safeguard review, and Zoho Mail retention settings have been confirmed by the company for the draft. Deletion implementation and its dry-run remain open. This document is not the public privacy notice and does not authorize deletion or automated purging of production records.
 
 **Scope reviewed:** Public website and staff careers portal in `Rheel-Git/RheelTech`; production Supabase project `Rheel-Tech` (`eu-west-1`); deployed Supabase Edge Functions; the production careers gateway configuration described in this repository.
 
@@ -57,10 +57,10 @@ Successful candidates' records should move to a separately approved employee-rec
 - Approved lawful basis by purpose (contact enquiries, recruitment, staff account administration, security/audit), confirmed by the company's adviser. The required application checkbox alone should not be assumed to settle every processing purpose.
 - Retention periods are approved for drafting: 12 months for unsuccessful/withdrawn applications and CVs, 12 months for contact enquiries, and 24 months for staff audit entries. Confirm how exceptions/legal holds work.
 - Complete processor list and roles, including the company mailbox, GitHub Pages, Cloudflare, Supabase, Resend, and Google Fonts (or decision to self-host the fonts).
-- Exact company mailbox provider, mailbox copy retention, and archive/forwarding behavior.
-- Applicable international-transfer basis and safeguards for the EU-hosted Supabase project, Resend's US processing/storage, and any other out-of-country processing.
+- Zoho Mail is the receiving inbox provider; company confirms 12-month retention also covers forwarding/archive copies.
+- Company confirms international-transfer grounds and safeguards were reviewed with its adviser for the EU-hosted Supabase project, Resend's US processing/storage, Zoho Mail, and any other out-of-country processing.
 - Data-subject rights, privacy contact, complaint route to NDPC, and any relevant automated decision-making statement.
-- Confirmation of whether analytics, cookies, spam protection, and gateway request logging are enabled in production.
+- Company confirms no analytics or non-essential tracking are enabled. Retain the gateway logging and provider backup/log windows in the internal processing record.
 
 ## Sources
 
