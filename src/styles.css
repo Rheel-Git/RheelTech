@@ -181,7 +181,8 @@ html, body, #root { width: 100%; min-width: 320px; min-height: 100%; }
 /* Keep the staff portal inside the mobile browser viewport. Let the app root
    handle vertical scrolling so horizontal overflow cannot reveal the body. */
 @media (max-width: 850px) {
-  html, body {
+  html:has(#root .dashboard),
+  body:has(#root .dashboard) {
     width: 100%;
     max-width: 100%;
     overflow: hidden !important;
