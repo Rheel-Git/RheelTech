@@ -51,16 +51,11 @@ Successful candidates' records should move to a separately approved employee-rec
 6. Keep a dry-run report and require an operator to review affected record counts before the first production cleanup. Do not expose names, email addresses, CV paths, or other applicant details in routine job logs.
 7. Add an admin-visible deletion/request workflow and a protected scheduled cleanup mechanism only after periods, access controls, failure handling, and backup behavior are approved.
 
-## Public notice decisions still required
+## Confirmed drafting decisions and publication blockers
 
-- The supplied business address is **Plot 473, Constitution Avenue, Abuja, FCT, Nigeria**.
-- Approved lawful basis by purpose (contact enquiries, recruitment, staff account administration, security/audit), confirmed by the company's adviser. The required application checkbox alone should not be assumed to settle every processing purpose.
-- Retention periods are approved for drafting: 12 months for unsuccessful/withdrawn applications and CVs, 12 months for contact enquiries, and 24 months for staff audit entries. Confirm how exceptions/legal holds work.
-- Complete processor list and roles, including the company mailbox, GitHub Pages, Cloudflare, Supabase, Resend, and Google Fonts (or decision to self-host the fonts).
-- Zoho Mail is the receiving inbox provider; company confirms 12-month retention also covers forwarding/archive copies.
-- Company confirms international-transfer grounds and safeguards were reviewed with its adviser for the EU-hosted Supabase project, Resend's US processing/storage, Zoho Mail, and any other out-of-country processing.
-- Data-subject rights, privacy contact, complaint route to NDPC, and any relevant automated decision-making statement.
-- Company confirms no analytics or non-essential tracking are enabled. Retain the gateway logging and provider backup/log windows in the internal processing record.
+- **Confirmed for this draft:** business address; purpose-specific lawful bases reviewed with the adviser; operational retention periods and legal-hold handling; Zoho Mail as the receiving provider, including 12-month retention of mailbox, forwarding, and archive copies; international-transfer safeguards reviewed with the adviser; no analytics or non-essential tracking.
+- **Still required before publication:** implement and dry-run the retention/deletion process; verify actual provider backup, email-log, gateway-log, and mailbox-copy expiry settings; confirm the exact privacy-request response timeframe and NDPC complaint route with the adviser; close the publication checklist and update the notice date.
+- The application consent checkbox does not, by itself, establish the lawful basis for every processing purpose.
 
 ## Sources
 
