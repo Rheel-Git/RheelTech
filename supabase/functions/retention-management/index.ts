@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const allowedOrigins = new Set([
+  'https://rheeltech.ng',
   'https://rheel-git.github.io',
   'https://rheeltech-staging-git-vercel-staging-rheel.vercel.app',
   'http://localhost:4173',
