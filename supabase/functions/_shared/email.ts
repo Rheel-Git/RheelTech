@@ -17,6 +17,46 @@ export function isValidEmail(value: string): boolean {
   return value.length <= 320 && /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(value);
 }
 
+async function safeResendErrorCode(response: Response): Promise<string> {
+  const reader = response.body?.getReader();
+  if (!reader) return 'unclassified';
+
+  const chunks: Uint8Array[] = [];
+  let length = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      length += value.byteLength;
+      if (length > 4096) {
+        await reader.cancel();
+        return 'response_too_large';
+      }
+      chunks.push(value);
+    }
+  } catch {
+    return 'response_unavailable';
+  } finally {
+    reader.releaseLock();
+  }
+
+  try {
+    const bytes = new Uint8Array(length);
+    let offset = 0;
+    for (const chunk of chunks) {
+      bytes.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    const payload = JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>;
+    const code = payload.name ?? payload.code ?? payload.type;
+    return typeof code === 'string' && /^[a-z0-9][a-z0-9_.-]{0,63}$/i.test(code)
+      ? code.toLowerCase()
+      : 'unclassified';
+  } catch {
+    return 'unclassified';
+  }
+}
+
 export async function sendResendEmail(input: {
   config: ResendConfig;
   to: string;
@@ -41,8 +81,14 @@ export async function sendResendEmail(input: {
     });
 
     if (!response.ok) {
-      // Do not log the provider response: it may contain submitted addresses or content.
-      console.error(JSON.stringify({ event: 'resend_delivery_failed', status: response.status }));
+      // Log only the HTTP status and a constrained machine-readable provider
+      // code. Never log the free-text body, which could contain personal data.
+      const providerErrorCode = await safeResendErrorCode(response);
+      console.error(JSON.stringify({
+        event: 'resend_delivery_failed',
+        status: response.status,
+        provider_error_code: providerErrorCode,
+      }));
       return false;
     }
     return true;

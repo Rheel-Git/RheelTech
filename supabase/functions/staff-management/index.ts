@@ -1,11 +1,9 @@
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getResendConfig, isValidEmail, sendResendEmail } from '../_shared/email.ts';
+import { getStaffOrigins, logStaffDiagnostic, staffCorsHeaders } from './safety.mjs';
 
-const allowedOrigins = new Set([
-  'https://rheeltech-staging-git-vercel-staging-rheel.vercel.app',
-  'http://localhost:4173',
-  'http://127.0.0.1:4173',
-]);
+const projectRef = Deno.env.get('SUPABASE_URL')?.match(/^https:\/\/([a-z0-9]+)\.supabase\.co\/?$/i)?.[1] || '';
+const allowedOrigins = getStaffOrigins(Deno.env.get('STAFF_ALLOWED_ORIGINS') || '', projectRef);
 const maxBodyBytes = 16 * 1024;
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 type StaffRole = 'admin' | 'recruiter';
@@ -15,14 +13,8 @@ type AuthUser = { id: string; email?: string; created_at: string; last_sign_in_a
 type AdminClient = SupabaseClient<any, 'public'>;
 
 function headers(request: Request): Headers {
-  const result = new Headers({ 'Vary': 'Origin', 'Content-Type': 'application/json' });
   const origin = request.headers.get('origin') || '';
-  if (allowedOrigins.has(origin)) {
-    result.set('Access-Control-Allow-Origin', origin);
-    result.set('Access-Control-Allow-Headers', 'authorization, x-client-info, apikey, content-type');
-    result.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  }
-  return result;
+  return staffCorsHeaders(origin, allowedOrigins);
 }
 
 function json(request: Request, body: unknown, status = 200): Response {
@@ -139,9 +131,12 @@ Deno.serve(async (request) => {
     const actorEmail = authData.user.email?.toLowerCase();
     if (!actorEmail || !isValidEmail(actorEmail)) return json(request, { error: 'Sign in again to manage staff.' }, 401);
     const { data: actor, error: actorError } = await admin.from('admin_profiles')
-      .select('role,is_active').eq('user_id', actorId).maybeSingle();
-    if (actorError || actor?.role !== 'admin' || actor.is_active !== true) {
-      return json(request, { error: 'Only an active administrator can manage staff.' }, 403);
+      .select('user_id,role,is_active').eq('user_id', actorId).maybeSingle();
+    if (actorError || !actor || actor.role !== 'admin' || actor.is_active !== true) {
+      logStaffDiagnostic('staff_management_authorization_denied', actorError?.code);
+      return json(request, {
+        error: 'Administrator verification failed. Check staff-management logs.'
+      }, 403);
     }
 
     if (action === 'list') {
@@ -196,7 +191,7 @@ Deno.serve(async (request) => {
           const { data: racedProfile } = await admin.from('admin_profiles').select('user_id').eq('user_id', targetUserId).maybeSingle();
           if (!racedProfile) await admin.auth.admin.deleteUser(targetUserId);
         }
-        console.error(JSON.stringify({ event: 'staff_invite_profile_save_failed' }));
+        logStaffDiagnostic('staff_invite_profile_save_failed', profileInsertError.code);
         return json(request, { error: 'The staff invitation could not be prepared.' }, 500);
       }
       const emailSent = await sendResendEmail({
@@ -214,7 +209,7 @@ Deno.serve(async (request) => {
       });
       if (emailSent) {
         try { await audit(admin, actorId, actorEmail, targetUserId, email, 'invitation_sent', role); }
-        catch { console.error(JSON.stringify({ event: 'staff_invitation_delivery_audit_failed' })); }
+        catch (error) { logStaffDiagnostic('staff_invitation_delivery_audit_failed', (error as { code?: string })?.code); }
       }
       return json(request, { ok: true, inviteEmailSent: emailSent, message: emailSent ? 'Invitation created and email accepted by the mail provider.' : 'Staff access was prepared, but the invitation email could not be sent. Use Send setup link to retry.' }, 201);
     }
@@ -251,7 +246,7 @@ Deno.serve(async (request) => {
       if (error) {
         if (action === 'reactivate') {
           await admin.auth.admin.updateUserById(targetId, { ban_duration: '876000h' });
-          console.error(JSON.stringify({ event: 'staff_reactivation_profile_save_failed' }));
+          logStaffDiagnostic('staff_reactivation_profile_save_failed', error.code);
         }
         if (error.code === '23514') return json(request, { error: 'The last active administrator cannot be deactivated.' }, 409);
         if (error.code === '22023') return json(request, { error: 'You cannot deactivate your own account.' }, 409);
@@ -285,7 +280,7 @@ Deno.serve(async (request) => {
       });
       if (emailSent) {
         try { await audit(admin, actorId, actorEmail, targetId, targetEmail, 'setup_link_sent'); }
-        catch { console.error(JSON.stringify({ event: 'staff_setup_delivery_audit_failed' })); }
+        catch (error) { logStaffDiagnostic('staff_setup_delivery_audit_failed', (error as { code?: string })?.code); }
       }
       return json(request, { ok: true, inviteEmailSent: emailSent, message: emailSent ? 'Setup link email accepted by the mail provider.' : 'The setup link email could not be sent. Try again later.' }, emailSent ? 200 : 502);
     }
@@ -304,7 +299,7 @@ Deno.serve(async (request) => {
       const { error: deleteError } = await admin.auth.admin.deleteUser(targetId);
       if (deleteError) {
         await audit(admin, actorId, actorEmail, targetId, targetEmail, 'removal_failed', profile.role);
-        console.error(JSON.stringify({ event: 'staff_removal_failed' }));
+        logStaffDiagnostic('staff_removal_failed', deleteError.code);
         return json(request, { error: 'Access is deactivated, but the Auth account could not be removed. It is safe to retry removal.' }, 502);
       }
       await audit(admin, actorId, actorEmail, targetId, targetEmail, 'removal_completed', profile.role);
@@ -312,8 +307,8 @@ Deno.serve(async (request) => {
     }
 
     return json(request, { error: 'Choose a valid staff action.' }, 400);
-  } catch {
-    console.error(JSON.stringify({ event: 'staff_management_request_failed', action }));
+  } catch (error) {
+    logStaffDiagnostic('staff_management_request_failed', (error as { code?: string })?.code);
     return json(request, { error: 'Staff management could not complete this request. Refresh the list and try again.' }, 500);
   }
 });
