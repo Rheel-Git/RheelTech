@@ -1,1 +1,44 @@
-<!doctype html><html><head><meta charset="utf-8"><title>Loading page…</title></head><body><script>var p=location.pathname+location.search+location.hash;location.replace('/RheelTech/?__route='+encodeURIComponent(p))</script><p>Loading page…</p></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Loading page…</title>
+</head>
+<body>
+  <p>Loading page…</p>
+  <script>
+    const params = new URLSearchParams(location.search);
+    let requested = params.get('__route') || (location.pathname + location.search + location.hash);
+    let resolved = false;
+
+    // Unwrap legacy fallback URLs so they cannot recursively grow on each redirect.
+    for (let attempt = 0; attempt < 100; attempt += 1) {
+      try {
+        const parsed = new URL(requested, location.origin);
+        const nestedRoute = new URLSearchParams(parsed.search).get('__route');
+        if (!nestedRoute) {
+          requested = parsed.pathname + parsed.search + parsed.hash;
+          resolved = true;
+          break;
+        }
+        requested = nestedRoute;
+      } catch {
+        break;
+      }
+    }
+
+    if (!resolved || !requested.startsWith('/')) requested = '/';
+
+    const isProjectPages = location.hostname === 'rheel-git.github.io';
+    if (isProjectPages) {
+      location.replace('/RheelTech/?__route=' + encodeURIComponent(requested));
+    } else {
+      // The production custom domain is hosted at the root, not under /RheelTech.
+      if (requested === '/RheelTech') requested = '/';
+      else if (requested.startsWith('/RheelTech/')) requested = requested.slice('/RheelTech'.length);
+      location.replace('/?__route=' + encodeURIComponent(requested));
+    }
+  </script>
+</body>
+</html>
