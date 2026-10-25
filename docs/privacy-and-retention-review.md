@@ -1,6 +1,6 @@
 # Privacy notice and retention review
 
-**Status:** Internal review draft. This document is not the public privacy notice, has not been approved by company counsel, and does not authorize deletion or automated purging of production records.
+**Status:** Internal review draft. The business address and operational schedule have been provided/approved by the company for drafting. Legal, transfer, processor, mailbox, and implementation review remain open. This document is not the public privacy notice and does not authorize deletion or automated purging of production records.
 
 **Scope reviewed:** Public website and staff careers portal in `Rheel-Git/RheelTech`; production Supabase project `Rheel-Tech` (`eu-west-1`); deployed Supabase Edge Functions; the production careers gateway configuration described in this repository.
 
@@ -26,9 +26,9 @@ Production database inspection found RLS enabled on all application tables. The 
 6. **Cloudflare gateway logging is unverified.** The gateway implementation itself is not included in the repository, so confirm that request bodies and headers are not logged and establish its log retention period.
 7. **Production/repository migration drift exists.** Production reports migration `20261019195750_careers_security_reconciliation`, but the matching SQL file was not present in the repository tree when reviewed. Reconcile this before adding a retention migration or scheduled cleanup.
 
-## Draft retention schedule for approval
+## Company-approved draft retention schedule
 
-These are operational proposals, not statutory retention periods. Do not activate cleanup until the company and its legal adviser approve each period and any exceptions.
+The company approved these periods for drafting on 25 October 2026. They are operational policy choices, not statutory periods. Do not activate cleanup until the deletion mechanism, exceptions, provider copies, and legal review are complete.
 
 | Category | Proposed rule | Expiry anchor |
 |---|---|---|
@@ -53,10 +53,11 @@ Successful candidates' records should move to a separately approved employee-rec
 
 ## Public notice decisions still required
 
-- Exact registered/business address for Rheel Technology Limited.
+- The supplied business address is **Plot 473, Constitution Avenue, Abuja, FCT, Nigeria**.
 - Approved lawful basis by purpose (contact enquiries, recruitment, staff account administration, security/audit), confirmed by the company's adviser. The required application checkbox alone should not be assumed to settle every processing purpose.
-- Approved retention periods and how exceptions/legal holds work.
+- Retention periods are approved for drafting: 12 months for unsuccessful/withdrawn applications and CVs, 12 months for contact enquiries, and 24 months for staff audit entries. Confirm how exceptions/legal holds work.
 - Complete processor list and roles, including the company mailbox, GitHub Pages, Cloudflare, Supabase, Resend, and Google Fonts (or decision to self-host the fonts).
+- Exact company mailbox provider, mailbox copy retention, and archive/forwarding behavior.
 - Applicable international-transfer basis and safeguards for the EU-hosted Supabase project, Resend's US processing/storage, and any other out-of-country processing.
 - Data-subject rights, privacy contact, complaint route to NDPC, and any relevant automated decision-making statement.
 - Confirmation of whether analytics, cookies, spam protection, and gateway request logging are enabled in production.
@@ -68,3 +69,8 @@ Successful candidates' records should move to a separately approved employee-rec
 - [Supabase Data Residency and Transfers FAQ](https://supabase.com/legal/privacy-resources/data-residency-and-transfers-faq)
 - [Supabase database backup documentation](https://supabase.com/docs/guides/platform/backups)
 - [Resend security and retention information](https://resend.com/security)
+
+
+## Draft notice
+
+A separate publication candidate is in [privacy-notice-draft.md](privacy-notice-draft.md). It remains internal until its checklist is closed and the notice accurately describes an implemented deletion process.
