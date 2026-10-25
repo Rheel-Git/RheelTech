@@ -30,7 +30,7 @@ Production database inspection found RLS enabled on all application tables. The 
 
 The company approved these periods for drafting on 25 October 2026. They are operational policy choices, not statutory periods. Do not activate cleanup until the deletion mechanism, exceptions, provider copies, and legal review are complete.
 
-| Category | Proposed rule | Expiry anchor |
+| Category | Approved draft rule | Expiry anchor |
 |---|---|---|
 | Unsuccessful/withdrawn application and CV | 12 months | Final recruitment decision for the vacancy |
 | Contact enquiry and associated mailbox copies | 12 months | Last substantive response or resolution |
