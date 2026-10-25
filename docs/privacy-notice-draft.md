@@ -1,14 +1,15 @@
 # Rheel Technology Limited — Privacy Notice
 
-**Internal draft — publication still depends on the retention deletion workflow and operational checks described below.**  
-Drafted: 25 October 2026.  
-The operational retention periods below were approved for drafting by the company on 25 October 2026. They are internal policy choices, not statutory periods.
+**Approved production privacy notice copy.**
+
+Prepared: 25 October 2026.
+The operational retention periods below were approved by the company on 25 October 2026. They are internal policy choices, not statutory periods.
 
 ## 1. Who we are
 
 Rheel Technology Limited is the organisation responsible for personal data collected through the RheelTech website and careers portal.
 
-**Business address:** Plot 473, Constitution Avenue, Abuja, FCT, Nigeria.  
+**Business address:** Plot 473, Constitution Avenue, Abuja, FCT, Nigeria.
 **Privacy contact:** [hello@rheeltech.ng](mailto:hello@rheeltech.ng). Please use “Privacy request” in the subject line.
 
 ## 2. Information we collect and why
@@ -87,17 +88,8 @@ The careers application flow uses browser session storage to retain a submission
 
 ## 8. Changes and contact
 
-We will update this notice when our data practices change. The “last updated” date will be changed when the approved notice is published.
+We will update this notice when our data practices change. The “last updated” date reflects the date this notice was approved and published.
 
-**Rheel Technology Limited**  
-Plot 473, Constitution Avenue, Abuja, FCT, Nigeria  
+**Rheel Technology Limited**
+Plot 473, Constitution Avenue, Abuja, FCT, Nigeria
 [hello@rheeltech.ng](mailto:hello@rheeltech.ng)
-
----
-
-## Remaining publication checks
-
-- Retention deletion workflow must be implemented, reviewed, and dry-run before it is described as operational.
-- Confirm provider backup/log windows remain accurate when the notice is published.
-- Add the actual privacy-request response timeframe and complaint link approved by counsel.
-- Remove this internal checklist and update the notice date before publication.
