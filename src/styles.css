@@ -224,3 +224,10 @@ html, body, #root { width: 100%; min-width: 320px; min-height: 100%; }
     overscroll-behavior-x: contain;
   }
 }
+
+
+/* CheckReport product card and hero badge. */
+.bubble.b3{right:0;bottom:48px;animation-delay:-3s}
+.product-logo.logo-C{max-width:230px}
+.mock-C{background:#edf7f4}
+.productdetail:nth-of-type(4) .mock{background:#edf7f4}
